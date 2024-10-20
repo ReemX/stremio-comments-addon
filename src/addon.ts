@@ -23,6 +23,7 @@ async function getShowInfoFromIMDB(
   imdbId: string
 ): Promise<{ name: string; alternativeTitles: string[]; seasons: number }> {
   const url = `https://www.imdb.com/title/${imdbId}/`;
+  console.log("Fetching IMDB page:", url);
   try {
     const response = await fetch(url);
     const html = await response.text();
@@ -56,6 +57,11 @@ async function getShowInfoFromIMDB(
       (title) => title !== showName
     );
 
+    console.log(
+      `Found show: ${showName}, Alternative Titles: ${altTitlesArray.join(
+        ", "
+      )}, Seasons: ${seasons}`
+    );
     return { name: showName, alternativeTitles: altTitlesArray, seasons };
   } catch (error) {
     console.error("Error fetching IMDB page:", error);
@@ -70,6 +76,7 @@ async function parseImdbId(id: string): Promise<{
   episode: number;
   totalSeasons: number;
 }> {
+  console.log("Parsing IMDB ID:", id);
   const match = id.match(/tt(\d+):(\d+):(\d+)/);
   if (!match) {
     throw new Error("Invalid IMDB ID format");
@@ -81,6 +88,11 @@ async function parseImdbId(id: string): Promise<{
     alternativeTitles,
     seasons: totalSeasons,
   } = await getShowInfoFromIMDB(`tt${imdbId}`);
+  console.log(
+    `Parsed: showName="${showName}", alternativeTitles=[${alternativeTitles.join(
+      ", "
+    )}], season=${season}, episode=${episode}, totalSeasons=${totalSeasons}`
+  );
 
   return {
     showName,
@@ -195,6 +207,11 @@ async function getRedditPostUrl(
         );
 
       if (scoredResults.length > 0) {
+        console.log("Found best match URL:", scoredResults[0].url);
+        console.log(
+          "Match details:",
+          JSON.stringify(scoredResults[0], null, 2)
+        );
         return scoredResults[0].url;
       }
     }
@@ -206,6 +223,10 @@ async function getRedditPostUrl(
 
 builder.defineStreamHandler(
   async (args: StreamHandlerArgs): Promise<{ streams: Stream[] }> => {
+    console.log(
+      "Stream handler called with args:",
+      JSON.stringify(args, null, 2)
+    );
     if (args.type === "series") {
       try {
         const { showName, alternativeTitles, season, episode } =
@@ -220,6 +241,7 @@ builder.defineStreamHandler(
         );
 
         if (postUrl) {
+          console.log("Returning stream with URL:", postUrl);
           return {
             streams: [
               {
@@ -230,6 +252,7 @@ builder.defineStreamHandler(
             ],
           };
         } else {
+          console.log("No Reddit posts found for this episode.");
           return { streams: [] };
         }
       } catch (error) {
@@ -237,6 +260,7 @@ builder.defineStreamHandler(
         return { streams: [] };
       }
     }
+    console.log("Returning empty streams array for non-series type");
     return { streams: [] };
   }
 );
